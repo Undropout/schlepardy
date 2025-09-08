@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jeopardy Host Control Panel</title>
+    <style>
+        .buzzer-controls {
+    text-align: center;
+}
+
+.buzzer-status {
+    background: #0f3460;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    font-size: 1.2em;
+}
+
+#buzzerStatusText {
+    color: #4fbdba;
+    font-weight: bold;
+}
+
+#currentBuzzer {
+    color: #ffd700;
+    font-size: 1.5em;
+    margin-top: 10px;
+}
+
+.buzzer-enable-btn {
+    background: #28a745;
+}
+
+.buzzer-enable-btn:hover {
+    background: #218838;
+}
+
+.buzzer-log {
+    background: #0f3460;
+    padding: 15px;
+    border-radius: 8px;
+    margin-top: 20px;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.buzzer-log h3 {
+    color: #ffd700;
+    margin-bottom: 10px;
+}
+
+.buzzer-log ol {
+    list-style-position: inside;
+    color: #4fbdba;
+}
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: #1a1a2e;
+            color: white;
+            padding: 20px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #ffd700;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.7);
+            margin-bottom: 30px;
+        }
+
+        .section {
+            background: #16213e;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+
+        .contestants-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .contestant-card {
+            background: #0f3460;
+            padding: 15px;
+            border-radius: 8px;
+            border: 2px solid #ffd700;
+        }
+
+        .contestant-card h3 {
+            color: #ffd700;
+            margin-bottom: 10px;
+        }
+
+        .score-display {
+            font-size: 24px;
+            margin: 10px 0;
+            color: #4fbdba;
+        }
+
+        .score-controls {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            background: #e94560;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        button:hover {
+            background: #c13651;
+            transform: translateY(-2px);
+        }
+
+        .amount-btn {
+            background: #4fbdba;
+        }
+
+        .amount-btn:hover {
+            background: #3ca09d;
+        }
+
+        input[type="text"], input[type="number"] {
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #4fbdba;
+            background: #0f3460;
+            color: white;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+
+        .board-setup {
+            display: grid;
+            gap: 10px;
+        }
+
+        .category-setup {
+            display: grid;
+            grid-template-columns: 150px repeat(4, 1fr);
+            gap: 10px;
+            align-items: center;
+        }
+
+        .clue-input {
+            display: grid;
+            gap: 5px;
+        }
+
+        .control-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .display-link {
+            background: #ffd700;
+            color: #1a1a2e;
+            padding: 15px;
+            text-align: center;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+
+        .display-link a {
+            color: #1a1a2e;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        .active-clue {
+            background: #0f3460;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+            border: 2px solid #ffd700;
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎮 Jeopardy Host Control Panel</h1>
+
+    <div class="section">
+        <h2>Game Setup</h2>
+        <div class="contestants-grid">
+            <div>
+                <input type="text" id="contestant1" placeholder="Contestant 1 Name">
+            </div>
+            <div>
+                <input type="text" id="contestant2" placeholder="Contestant 2 Name">
+            </div>
+            <div>
+                <input type="text" id="contestant3" placeholder="Contestant 3 Name">
+            </div>
+        </div>
+        <button onclick="setupContestants()">Set Contestants</button>
+    </div>
+<div class="section">
+    <h2>Buzzer Control</h2>
+    <div class="buzzer-controls">
+        <div class="buzzer-status" id="buzzerStatus">
+            <p>Buzzer Status: <span id="buzzerStatusText">Disabled</span></p>
+            <p id="currentBuzzer"></p>
+        </div>
+        <div class="control-buttons">
+            <button onclick="enableBuzzers()" class="buzzer-enable-btn">Enable Buzzers</button>
+            <button onclick="resetBuzzers()">Reset Buzzers</button>
+            <button onclick="disableBuzzers()">Disable Buzzers</button>
+                    <button style="background: #28a745" onclick="clearClueAndBuzzers()">CLEAR BOARD AND BUZZER</button>
+
+        </div>
+        <div class="buzzer-log" id="buzzerLog">
+            <h3>Buzz Order:</h3>
+            <ol id="buzzerQueue"></ol>
+        </div>
+    </div>
+</div>
+    <div class="section">
+        <h2>Board Setup</h2>
+        <div class="board-setup">
+            <div class="category-setup">
+                <label>Category 1:</label>
+                <input type="text" class="category-name" placeholder="Category Name">
+                <input type="text" class="clue" data-cat="0" data-val="0" placeholder="$250 Clue">
+                <input type="text" class="clue" data-cat="0" data-val="1" placeholder="$500 Clue">
+                <input type="text" class="clue" data-cat="0" data-val="2" placeholder="$750 Clue">
+                <input type="text" class="clue" data-cat="0" data-val="3" placeholder="$1000 Clue">
+            </div>
+            <div class="category-setup">
+                <label>Category 2:</label>
+                <input type="text" class="category-name" placeholder="Category Name">
+                <input type="text" class="clue" data-cat="1" data-val="0" placeholder="$250 Clue">
+                <input type="text" class="clue" data-cat="1" data-val="1" placeholder="$500 Clue">
+                <input type="text" class="clue" data-cat="1" data-val="2" placeholder="$750 Clue">
+                <input type="text" class="clue" data-cat="1" data-val="3" placeholder="$1000 Clue">
+            </div>
+            <div class="category-setup">
+                <label>Category 3:</label>
+                <input type="text" class="category-name" placeholder="Category Name">
+                <input type="text" class="clue" data-cat="2" data-val="0" placeholder="$250 Clue">
+                <input type="text" class="clue" data-cat="2" data-val="1" placeholder="$500 Clue">
+                <input type="text" class="clue" data-cat="2" data-val="2" placeholder="$750 Clue">
+                <input type="text" class="clue" data-cat="2" data-val="3" placeholder="$1000 Clue">
+            </div>
+            <div class="category-setup">
+                <label>Category 4:</label>
+                <input type="text" class="category-name" placeholder="Category Name">
+                <input type="text" class="clue" data-cat="3" data-val="0" placeholder="$250 Clue">
+                <input type="text" class="clue" data-cat="3" data-val="1" placeholder="$500 Clue">
+                <input type="text" class="clue" data-cat="3" data-val="2" placeholder="$750 Clue">
+                <input type="text" class="clue" data-cat="3" data-val="3" placeholder="$1000 Clue">
+            </div>
+        </div>
+        <button onclick="setupBoard()">Create Board</button>
+    </div>
+
+    <div class="section">
+        <h2>Contestants</h2>
+        <div class="contestants-grid" id="contestantsDisplay"></div>
+    </div>
+
+    <div class="section">
+        <h2>Game Controls</h2>
+        <div class="control-buttons">
+            <button onclick="startNewGame()">New Game</button>
+            <button onclick="resetBoard()">Reset Board</button>
+            <button onclick="clearActiveClue()">Clear Active Clue</button>
+        </div>
+    </div>
+
+    <div class="active-clue hidden" id="activeClue">
+        <h3>Active Clue</h3>
+        <p id="activeClueText"></p>
+        <p>Value: $<span id="activeClueValue"></span></p>
+    </div>
+
+    <div class="display-link">
+        <p>Open the display window in a new tab/window:</p>
+        <a href="jeopardy-display.html" target="_blank">Open Jeopardy Display →</a>
+        
+        <div style="margin-top: 20px; padding-top: 20px; border-top: 2px solid #1a1a2e;">
+            <p>Contestant Buzzer Links (one per device):</p>
+            <p style="font-size: 0.9em; margin-top: 10px;">
+                <a href="jeopardy-buzzer.html" target="_blank">Open Buzzer Page →</a>
+            </p>
+            <p style="font-size: 0.8em; color: #666; margin-top: 10px;">
+                Each contestant should open this link on their own device (phone/tablet/laptop)
+            </p>
+        </div>
+    </div>
+
+    <script>
+        const values = [250, 500, 750, 1000];
+        let gameState = {
+            contestants: [],
+            categories: [],
+            board: [],
+            activeClue: null,
+            scores: {}
+        };
+
+        // Initialize or load game state
+        function loadGameState() {
+            const saved = localStorage.getItem('jeopardyGame');
+            if (saved) {
+                gameState = JSON.parse(saved);
+                updateUI();
+            }
+        }
+
+        function saveGameState() {
+            localStorage.setItem('jeopardyGame', JSON.stringify(gameState));
+            // Trigger storage event for other windows
+            window.dispatchEvent(new Event('storage'));
+        }
+
+        function setupContestants() {
+            gameState.contestants = [];
+            gameState.scores = {};
+            
+            for (let i = 1; i <= 3; i++) {
+                const name = document.getElementById(`contestant${i}`).value.trim();
+                if (name) {
+                    gameState.contestants.push(name);
+                    gameState.scores[name] = 0;
+                }
+            }
+            
+            saveGameState();
+            updateContestantsDisplay();
+        }
+
+        function setupBoard() {
+            gameState.categories = [];
+            gameState.board = [];
+            
+            const categoryInputs = document.querySelectorAll('.category-name');
+            categoryInputs.forEach((input, index) => {
+                if (input.value.trim()) {
+                    gameState.categories.push(input.value.trim());
+                }
+            });
+            
+            // Create board array
+            for (let cat = 0; cat < gameState.categories.length; cat++) {
+                gameState.board[cat] = [];
+                for (let val = 0; val < 4; val++) {
+                    const clueInput = document.querySelector(`.clue[data-cat="${cat}"][data-val="${val}"]`);
+                    gameState.board[cat][val] = {
+                        clue: clueInput.value.trim() || `Category ${cat + 1}, $${values[val]}`,
+                        value: values[val],
+                        used: false
+                    };
+                }
+            }
+            
+            saveGameState();
+            alert('Board created! The display will update automatically.');
+        }
+
+        function updateContestantsDisplay() {
+            const display = document.getElementById('contestantsDisplay');
+            display.innerHTML = '';
+            
+            gameState.contestants.forEach((name, index) => {
+                const card = document.createElement('div');
+                card.className = 'contestant-card';
+                const score = gameState.scores[name] || 0;
+                const scoreColor = score < 0 ? '#ff4444' : '#4fbdba';
+                card.innerHTML = `
+                    <h3>${name}</h3>
+                    <div class="score-display" style="color: ${scoreColor}">$${score}</div>
+                    <div class="score-controls">
+                        <button class="amount-btn" onclick="adjustScore('${name}', 250)">+$250</button>
+                        <button class="amount-btn" onclick="adjustScore('${name}', 500)">+$500</button>
+                        <button class="amount-btn" onclick="adjustScore('${name}', 750)">+$750</button>
+                        <button class="amount-btn" onclick="adjustScore('${name}', 1000)">+$1000</button>
+                        <button onclick="adjustScore('${name}', -250)">-$250</button>
+                        <button onclick="adjustScore('${name}', -500)">-$500</button>
+                        <button onclick="adjustScore('${name}', -750)">-$750</button>
+                        <button onclick="adjustScore('${name}', -1000)">-$1000</button>
+                    </div>
+                    <div style="margin-top: 10px;">
+                        <input type="number" id="custom${index}" placeholder="Custom amount">
+                        <button onclick="adjustScoreCustom('${name}', ${index})">Add Custom</button>
+                    </div>
+                `;
+                display.appendChild(card);
+            });
+        }
+
+        function adjustScore(contestant, amount) {
+            gameState.scores[contestant] = (gameState.scores[contestant] || 0) + amount;
+            saveGameState();
+            updateContestantsDisplay();
+        }
+
+        function adjustScoreCustom(contestant, index) {
+            const customAmount = parseInt(document.getElementById(`custom${index}`).value);
+            if (!isNaN(customAmount)) {
+                adjustScore(contestant, customAmount);
+                document.getElementById(`custom${index}`).value = '';
+            }
+        }
+
+        function showActiveClue(category, value, clue) {
+            gameState.activeClue = { category, value, clue };
+            document.getElementById('activeClueText').textContent = clue;
+            document.getElementById('activeClueValue').textContent = value;
+            document.getElementById('activeClue').classList.remove('hidden');
+            saveGameState();
+        }
+
+        function clearActiveClue() {
+            gameState.activeClue = null;
+            document.getElementById('activeClue').classList.add('hidden');
+            saveGameState();
+        }
+
+        function startNewGame() {
+            if (confirm('Start a new game? This will reset all scores.')) {
+                Object.keys(gameState.scores).forEach(contestant => {
+                    gameState.scores[contestant] = 0;
+                });
+                resetBoard();
+                saveGameState();
+                updateContestantsDisplay();
+            }
+        }
+
+        function resetBoard() {
+            if (gameState.board.length > 0) {
+                for (let cat = 0; cat < gameState.board.length; cat++) {
+                    for (let val = 0; val < gameState.board[cat].length; val++) {
+                        gameState.board[cat][val].used = false;
+                    }
+                }
+                clearActiveClue();
+                saveGameState();
+                alert('Board reset!');
+            }
+        }
+
+        function updateUI() {
+            if (gameState.contestants.length > 0) {
+                updateContestantsDisplay();
+            }
+            if (gameState.activeClue) {
+                document.getElementById('activeClueText').textContent = gameState.activeClue.clue;
+                document.getElementById('activeClueValue').textContent = gameState.activeClue.value;
+                document.getElementById('activeClue').classList.remove('hidden');
+            }
+        }
+
+        // Listen for clicks from the display window
+        window.addEventListener('storage', (e) => {
+            if (e.key === 'jeopardyClueClick') {
+                const data = JSON.parse(e.newValue);
+                if (data) {
+                    showActiveClue(data.category, data.value, data.clue);
+                    // Mark clue as used
+                    gameState.board[data.catIndex][data.valIndex].used = true;
+                    saveGameState();
+                }
+            }
+        });
+
+        // Load game state on startup
+        loadGameState();
+        // Buzzer control functions
+let buzzerState = {
+    enabled: false,
+    currentBuzzer: null,
+    buzzerQueue: []
+};
+
+function loadBuzzerState() {
+    const saved = localStorage.getItem('jeopardyBuzzer');
+    if (saved) {
+        buzzerState = JSON.parse(saved);
+        updateBuzzerUI();
+    }
+}
+
+function saveBuzzerState() {
+    localStorage.setItem('jeopardyBuzzer', JSON.stringify(buzzerState));
+    window.dispatchEvent(new Event('storage'));
+}
+
+function enableBuzzers() {
+    buzzerState.enabled = true;
+    buzzerState.currentBuzzer = null;
+    buzzerState.buzzerQueue = [];
+    saveBuzzerState();
+    updateBuzzerUI();
+}
+
+function resetBuzzers() {
+    buzzerState.currentBuzzer = null;
+    buzzerState.buzzerQueue = [];
+    saveBuzzerState();
+    updateBuzzerUI();
+}
+
+function disableBuzzers() {
+    buzzerState.enabled = false;
+    buzzerState.currentBuzzer = null;
+    buzzerState.buzzerQueue = [];
+    saveBuzzerState();
+    updateBuzzerUI();
+}
+
+function updateBuzzerUI() {
+    const statusText = document.getElementById('buzzerStatusText');
+    const currentBuzzerEl = document.getElementById('currentBuzzer');
+    const queueEl = document.getElementById('buzzerQueue');
+    
+    statusText.textContent = buzzerState.enabled ? 'Enabled' : 'Disabled';
+    statusText.style.color = buzzerState.enabled ? '#28a745' : '#ff4444';
+    
+    if (buzzerState.currentBuzzer) {
+        currentBuzzerEl.textContent = `${buzzerState.currentBuzzer} buzzed in!`;
+        currentBuzzerEl.style.display = 'block';
+    } else {
+        currentBuzzerEl.style.display = 'none';
+    }
+    
+    // Update buzzer queue display
+    queueEl.innerHTML = '';
+    buzzerState.buzzerQueue.forEach((buzz, index) => {
+        const li = document.createElement('li');
+        li.textContent = `${buzz.contestant} - ${new Date(buzz.timestamp).toLocaleTimeString()}`;
+        if (index === 0) li.style.color = '#ffd700';
+        queueEl.appendChild(li);
+    });
+}
+
+// Listen for buzz events
+window.addEventListener('storage', (e) => {
+    if (e.key === 'jeopardyBuzzEvent') {
+        const buzzData = JSON.parse(e.newValue);
+        if (buzzData) {
+            // Play a sound or show notification
+            console.log('Buzz from:', buzzData.contestant);
+        }
+    } else if (e.key === 'jeopardyBuzzer') {
+        loadBuzzerState();
+    }
+});
+
+// Load buzzer state on startup
+loadBuzzerState();
+setInterval(loadBuzzerState, 500);
+
+// Initialize buzzer state if not exists
+if (!localStorage.getItem('jeopardyBuzzer')) {
+    saveBuzzerState();
+}; 
+function clearClueAndBuzzers() {
+    clearActiveClue();
+    resetBuzzers();
+}
+    </script>
+</body>
+</html>
