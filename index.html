@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jeopardy Host Control Panel</title>
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+
+    <script>
+      // Your web app's Firebase configuration
+      const firebaseConfig = {
+        apiKey: "AIzaSyD5X7NrrFyAF1gCtaRJVXWUhohnXUBfxR8",
+        authDomain: "shlepardy-game.firebaseapp.com",
+        databaseURL: "https://shlepardy-game-default-rtdb.firebaseio.com",
+        projectId: "shlepardy-game",
+        storageBucket: "shlepardy-game.firebasestorage.app",
+        messagingSenderId: "1062728094019",
+        appId: "1:1062728094019:web:ac082ccd257e4fc40d1ff6"
+      };
+
+      // Initialize Firebase
+      firebase.initializeApp(firebaseConfig);
+      const database = firebase.database();
+      const gameId = 'default-game'; // You can change this for multiple games
+    </script>
+    
+    <style>
+        .buzzer-controls {
+            text-align: center;
+        }
+
+        .buzzer-status {
+            background: #0f3460;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 1.2em;
+        }
+
+        #buzzerStatusText {
+            color: #4fbdba;
+            font-weight: bold;
+        }
+
+        #currentBuzzer {
+            color: #ffd700;
+            font-size: 1.5em;
+            margin-top: 10px;
+        }
+
+        .buzzer-enable-btn {
+            background: #28a745;
+        }
+
+        .buzzer-enable-btn:hover {
+            background: #218838;
+        }
+
+        .buzzer-log {
+            background: #0f3460;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .buzzer-log h3 {
+            color: #ffd700;
+            margin-bottom: 10px;
+        }
+
+        .buzzer-log ol {
+            list-style-position: inside;
+            color: #4fbdba;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: #1a1a2e;
+            color: white;
+            padding: 20px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #ffd700;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.7);
+            margin-bottom: 30px;
+        }
+
+        .section {
+            background: #16213e;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+
+        .contestants-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .contestant-card {
+            background: #0f3460;
+            padding: 15px;
+            border-radius: 8px;
+            border: 2px solid #ffd700;
+        }
+
+        .contestant-card h3 {
+            color: #ffd700;
+            margin-bottom: 10px;
+        }
+
+        .score-display {
+            font-size: 24px;
+            margin: 10px 0;
+            color: #4fbdba;
+        }
+
+        .score-controls {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            background: #e94560;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        button:hover {
+            background: #c13651;
+            transform: translateY(-2px);
+        }
+
+        .amount-btn {
+            background: #4fbdba;
+        }
+
+        .amount-btn:hover {
+            background: #3ca09d;
+        }
+
+        input[type="text"], input[type="number"] {
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #4fbdba;
+            background: #0f3460;
+            color: white;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+
+        .board-setup {
+            display: grid;
+            gap: 10px;
+        }
+
+        .category-setup {
+            display: grid;
+            grid-template-columns: 150px repeat(4, 1fr);
+            gap: 10px;
+            align-items: center;
+        }
+
+        .clue-input {
+            display: grid;
+            gap: 5px;
+        }
+
+        .clue-input label {
+            color: #ffd700;
+            font-size: 0.9em;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .clue-input input[type="checkbox"] {
+            width: auto;
+            margin: 0;
+        }
+
+        .final-jeopardy-section {
+            background: #2c1b47;
+            border: 3px solid #ffd700;
+        }
+
+        .final-jeopardy-section h2 {
+            color: #ffd700;
+        }
+
+        .wager-popup {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #1a1a2e;
+            border: 3px solid #ffd700;
+            padding: 30px;
+            border-radius: 15px;
+            z-index: 2000;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+            text-align: center;
+            min-width: 300px;
+        }
+
+        .wager-popup h3 {
+            color: #ffd700;
+            margin-bottom: 20px;
+        }
+
+        .wager-popup input {
+            margin: 10px 0;
+        }
+
+        .wager-popup button {
+            margin: 5px;
+        }
+
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.7);
+            z-index: 1999;
+        }
+
+        .control-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .display-link {
+            background: #ffd700;
+            color: #1a1a2e;
+            padding: 15px;
+            text-align: center;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+
+        .display-link a {
+            color: #1a1a2e;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        .active-clue {
+            background: #0f3460;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+            border: 2px solid #ffd700;
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎮 Jeopardy Host Control Panel</h1>
+
+    <div class="section">
+        <h2>Game Setup</h2>
+        <div class="contestants-grid">
+            <div>
+                <input type="text" id="contestant1" placeholder="Contestant 1 Name">
+            </div>
+            <div>
+                <input type="text" id="contestant2" placeholder="Contestant 2 Name">
+            </div>
+            <div>
+                <input type="text" id="contestant3" placeholder="Contestant 3 Name">
+            </div>
+        </div>
+        <button onclick="setupContestants()">Set Contestants</button>
+    </div>
+    
+    <div class="section">
+        <h2>Buzzer Control</h2>
+        <div class="buzzer-controls">
+            <div class="buzzer-status" id="buzzerStatus">
+                <p>Buzzer Status: <span id="buzzerStatusText">Disabled</span></p>
+                <p id="currentBuzzer"></p>
+            </div>
+            <div class="control-buttons">
+                <button onclick="enableBuzzers()" class="buzzer-enable-btn">Enable Buzzers</button>
+                <button onclick="resetBuzzers()">Reset Buzzers</button>
+                <button onclick="disableBuzzers()">Disable Buzzers</button>
+                <button style="background: #28a745" onclick="clearClueAndBuzzers()">CLEAR BOARD AND BUZZER</button>
+            </div>
+            <div class="buzzer-log" id="buzzerLog">
+                <h3>Buzz Order:</h3>
+                <ol id="buzzerQueue"></ol>
+            </div>
+        </div>
+    </div>
+    
+    <div class="section">
+        <h2>Board Setup</h2>
+        <div class="board-setup">
+            <div class="category-setup">
+                <label>Category 1:</label>
+                <input type="text" class="category-name" placeholder="Category Name">
+                <div class="clue-input">
+                    <input type="text" class="clue" data-cat="0" data-val="0" placeholder="$250 Clue">
+                    <label><input type="checkbox" class="daily-double" data-cat="0" data-val="0"> Daily Double</label>
+                </div>
+                <div class="clue-input">
+                    <input type="text" class="clue" data-cat="0" data-val="1" placeholder="$500 Clue">
+                    <label><input type="checkbox" class="daily-double" data-cat="0" data-val="1"> Daily Double</label>
+                </div>
+                <div class="clue-input">
+                    <input type="text" class="clue" data-cat="0" data-val="2" placeholder="$750 Clue">
+                    <label><input type="checkbox" class="daily-double" data-cat="0" data-val="2"> Daily Double</label>
+                </div>
+                <div class="clue-input">
+                    <input type="text" class="clue" data-cat="0" data-val="3" placeholder="$1000 Clue">
+                    <label><input type="checkbox" class="daily-double" data-cat="0" data-val="3"> Daily Double</label>
+                </div>
+            </div>
+            <div class="category-setup">
+                <label>Category 2:</label>
+                <input type="text" class="category-name" placeholder="Category Name">
+                <div class="clue-input">
+                    <input type="text" class="clue" data-cat="1" data-val="0" placeholder="$250 Clue">
+                    <label><input type="checkbox" class="daily-double" data-cat="1" data-val="0"> Daily Double</label>
+                </div>
+                <div class="clue-input">
+                    <input type="text" class="clue" data-cat="1" data-val="1" placeholder="$500 Clue">
+                    <label><input type="checkbox" class="daily-double" data-cat="1" data-val="1"> Daily Double</label>
+                </div>
+                <div class="clue-input">
+                    <input type="text" class="clue" data-cat="1" data-val="2" placeholder="$750 Clue">
+                    <label><input type="checkbox" class="daily-double" data-cat="1" data-val="2"> Daily Double</label>
+                </div>
+                <div class="clue-input">
+                    <input type="text" class="clue" data-cat="1" data-val="3" placeholder="$1000 Clue">
+                    <label><input type="checkbox" class="daily-double" data-cat="1" data-val="3"> Daily Double</label>
+                </div>
+            </div>
+            <div class="category-setup">
+                <label>Category 3:</label>
+                <input type="text" class="category-name" placeholder="Category Name">
+                <div class="clue-input">
+                    <input type="text" class="clue" data-cat="2" data-val="0" placeholder="$250 Clue">
+                    <label><input type="checkbox" class="daily-double" data-cat="2" data-val="0"> Daily Double</label>
+                </div>
+                <div class="clue-input">
+                    <input type="text" class="clue" data-cat="2" data-val="1" placeholder="$500 Clue">
+                    <label><input type="checkbox" class="daily-double" data-cat="2" data-val="1"> Daily Double</label>
+                </div>
+                <div class="clue-input">
+                    <input type="text" class="clue" data-cat="2" data-val="2" placeholder="$750 Clue">
+                    <label><input type="checkbox" class="daily-double" data-cat="2" data-val="2"> Daily Double</label>
+                </div>
+                <div class="clue-input">
+                    <input type="text" class="clue" data-cat="2" data-val="3" placeholder="$1000 Clue">
+                    <label><input type="checkbox" class="daily-double" data-cat="2" data-val="3"> Daily Double</label>
+                </div>
+            </div>
+            <div class="category-setup">
+                <label>Category 4:</label>
+                <input type="text" class="category-name" placeholder="Category Name">
+                <div class="clue-input">
+                    <input type="text" class="clue" data-cat="3" data-val="0" placeholder="$250 Clue">
+                    <label><input type="checkbox" class="daily-double" data-cat="3" data-val="0"> Daily Double</label>
+                </div>
+                <div class="clue-input">
+                    <input type="text" class="clue" data-cat="3" data-val="1" placeholder="$500 Clue">
+                    <label><input type="checkbox" class="daily-double" data-cat="3" data-val="1"> Daily Double</label>
+                </div>
+                <div class="clue-input">
+                    <input type="text" class="clue" data-cat="3" data-val="2" placeholder="$750 Clue">
+                    <label><input type="checkbox" class="daily-double" data-cat="3" data-val="2"> Daily Double</label>
+                </div>
+                <div class="clue-input">
+                    <input type="text" class="clue" data-cat="3" data-val="3" placeholder="$1000 Clue">
+                    <label><input type="checkbox" class="daily-double" data-cat="3" data-val="3"> Daily Double</label>
+                </div>
+            </div>
+        </div>
+        <button onclick="setupBoard()">Create Board</button>
+    </div>
+
+    <div class="section">
+        <h2>Contestants</h2>
+        <div class="contestants-grid" id="contestantsDisplay"></div>
+    </div>
+
+    <div class="section final-jeopardy-section">
+        <h2>Final Jeopardy</h2>
+        <div style="display: grid; gap: 15px;">
+            <input type="text" id="finalCategory" placeholder="Final Jeopardy Category">
+            <input type="text" id="finalClue" placeholder="Final Jeopardy Clue">
+            <button onclick="startFinalJeopardy()" style="background: #ffd700; color: #1a1a2e;">Start Final Jeopardy</button>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>Game Controls</h2>
+        <div class="control-buttons">
+            <button onclick="startNewGame()">New Game</button>
+            <button onclick="resetBoard()">Reset Board</button>
+            <button onclick="clearActiveClue()">Clear Active Clue</button>
+        </div>
+    </div>
+
+    <div class="active-clue hidden" id="activeClue">
+        <h3>Active Clue</h3>
+        <p id="activeClueText"></p>
+        <p>Value: $<span id="activeClueValue"></span></p>
+    </div>
+
+    <div class="display-link">
+        <p>Open the display window in a new tab/window:</p>
+        <a href="jeopardy-display.html" target="_blank">Open Jeopardy Display →</a>
+        
+        <div style="margin-top: 20px; padding-top: 20px; border-top: 2px solid #1a1a2e;">
+            <p>Contestant Buzzer Links (one per device):</p>
+            <p style="font-size: 0.9em; margin-top: 10px;">
+                <a href="jeopardy-buzzer.html" target="_blank">Open Buzzer Page →</a>
+            </p>
+            <p style="font-size: 0.8em; color: #666; margin-top: 10px;">
+                Each contestant should open this link on their own device (phone/tablet/laptop)
+            </p>
+        </div>
+    </div>
+
+    <script>
+        const values = [250, 500, 750, 1000];
+        let gameState = {
+            contestants: [],
+            categories: [],
+            board: [],
+            activeClue: null,
+            scores: {},
+            finalJeopardy: null
+        };
+
+        // Initialize Firebase listeners
+        function initializeFirebase() {
+            // Listen for game state changes
+            database.ref(`games/${gameId}/gameState`).on('value', (snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    gameState = data;
+                    updateUI();
+                }
+            });
+
+            // Listen for buzzer state changes
+            database.ref(`games/${gameId}/buzzerState`).on('value', (snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    buzzerState = data;
+                    updateBuzzerUI();
+                }
+            });
+
+            // Listen for clue click events
+            database.ref(`games/${gameId}/clueClick`).on('value', (snapshot) => {
+                const data = snapshot.val();
+                if (data && data.timestamp > Date.now() - 5000) { // Only process recent clicks
+                    const clueData = gameState.board[data.catIndex][data.valIndex];
+                    showActiveClue(data.category, data.value, data.clue, clueData.dailyDouble);
+                    // Mark clue as used
+                    gameState.board[data.catIndex][data.valIndex].used = true;
+                    saveGameState();
+                }
+            });
+        }
+
+        function saveGameState() {
+            database.ref(`games/${gameId}/gameState`).set(gameState);
+        }
+
+        function setupContestants() {
+            gameState.contestants = [];
+            gameState.scores = {};
+            
+            for (let i = 1; i <= 3; i++) {
+                const name = document.getElementById(`contestant${i}`).value.trim();
+                if (name) {
+                    gameState.contestants.push(name);
+                    gameState.scores[name] = 0;
+                }
+            }
+            
+            saveGameState();
+            updateContestantsDisplay();
+        }
+
+        function setupBoard() {
+            gameState.categories = [];
+            gameState.board = [];
+            
+            const categoryInputs = document.querySelectorAll('.category-name');
+            categoryInputs.forEach((input, index) => {
+                if (input.value.trim()) {
+                    gameState.categories.push(input.value.trim());
+                }
+            });
+            
+            // Create board array
+            for (let cat = 0; cat < gameState.categories.length; cat++) {
+                gameState.board[cat] = [];
+                for (let val = 0; val < 4; val++) {
+                    const clueInput = document.querySelector(`.clue[data-cat="${cat}"][data-val="${val}"]`);
+                    const ddCheckbox = document.querySelector(`.daily-double[data-cat="${cat}"][data-val="${val}"]`);
+                    gameState.board[cat][val] = {
+                        clue: clueInput.value.trim() || `Category ${cat + 1}, $${values[val]}`,
+                        value: values[val],
+                        used: false,
+                        dailyDouble: ddCheckbox.checked
+                    };
+                }
+            }
+            
+            saveGameState();
+            alert('Board created! The display will update automatically.');
+        }
+
+        function showActiveClue(category, value, clue, isDailyDouble) {
+            if (isDailyDouble) {
+                showWagerPopup((wager) => {
+                    gameState.activeClue = { category, value: wager, clue, isDailyDouble: true };
+                    document.getElementById('activeClueText').textContent = `DAILY DOUBLE! ${clue}`;
+                    document.getElementById('activeClueValue').textContent = wager;
+                    document.getElementById('activeClue').classList.remove('hidden');
+                    saveGameState();
+                });
+            } else {
+                gameState.activeClue = { category, value, clue };
+                document.getElementById('activeClueText').textContent = clue;
+                document.getElementById('activeClueValue').textContent = value;
+                document.getElementById('activeClue').classList.remove('hidden');
+                saveGameState();
+            }
+        }
+
+        function showWagerPopup(callback) {
+            const overlay = document.createElement('div');
+            overlay.className = 'overlay';
+            
+            const popup = document.createElement('div');
+            popup.className = 'wager-popup';
+            popup.innerHTML = `
+                <h3>Enter Wager Amount</h3>
+                <input type="number" id="wagerAmount" placeholder="Enter wager" min="0">
+                <div>
+                    <button onclick="submitWager()">Submit</button>
+                    <button onclick="cancelWager()">Cancel</button>
+                </div>
+            `;
+            
+            document.body.appendChild(overlay);
+            document.body.appendChild(popup);
+            document.getElementById('wagerAmount').focus();
+            
+            window.currentWagerCallback = callback;
+        }
+
+        function submitWager() {
+            const wager = parseInt(document.getElementById('wagerAmount').value);
+            if (!isNaN(wager) && wager >= 0) {
+                if (window.currentWagerCallback) {
+                    window.currentWagerCallback(wager);
+                }
+                closeWagerPopup();
+            } else {
+                alert('Please enter a valid wager amount');
+            }
+        }
+
+        function cancelWager() {
+            closeWagerPopup();
+        }
+
+        function closeWagerPopup() {
+            const overlay = document.querySelector('.overlay');
+            const popup = document.querySelector('.wager-popup');
+            if (overlay) overlay.remove();
+            if (popup) popup.remove();
+            window.currentWagerCallback = null;
+        }
+
+        function startFinalJeopardy() {
+            const category = document.getElementById('finalCategory').value.trim();
+            const clue = document.getElementById('finalClue').value.trim();
+            
+            if (!category || !clue) {
+                alert('Please enter both category and clue for Final Jeopardy');
+                return;
+            }
+            
+            // Get wagers for each contestant
+            const wagers = {};
+            let currentContestantIndex = 0;
+            const contestants = gameState.contestants;
+            
+            function getNextWager() {
+                if (currentContestantIndex >= contestants.length) {
+                    // All wagers collected, start Final Jeopardy
+                    gameState.finalJeopardy = {
+                        category,
+                        clue,
+                        wagers,
+                        active: true
+                    };
+                    saveGameState();
+                    alert('Final Jeopardy started!');
+                    return;
+                }
+                
+                const contestant = contestants[currentContestantIndex];
+                const currentScore = gameState.scores[contestant] || 0;
+                
+                showFinalWagerPopup(contestant, currentScore, (wager) => {
+                    wagers[contestant] = wager;
+                    currentContestantIndex++;
+                    getNextWager();
+                });
+            }
+            
+            getNextWager();
+        }
+
+        function showFinalWagerPopup(contestant, maxWager, callback) {
+            const overlay = document.createElement('div');
+            overlay.className = 'overlay';
+            
+            const popup = document.createElement('div');
+            popup.className = 'wager-popup';
+            popup.innerHTML = `
+                <h3>Final Jeopardy Wager for ${contestant}</h3>
+                <p>Current Score: $${maxWager}</p>
+                <p>Maximum Wager: $${Math.max(0, maxWager)}</p>
+                <input type="number" id="finalWagerAmount" placeholder="Enter wager" min="0" max="${Math.max(0, maxWager)}">
+                <div>
+                    <button onclick="submitFinalWager('${contestant}', ${maxWager})">Submit</button>
+                </div>
+            `;
+            
+            document.body.appendChild(overlay);
+            document.body.appendChild(popup);
+            document.getElementById('finalWagerAmount').focus();
+            
+            window.currentFinalWagerCallback = callback;
+        }
+
+        function submitFinalWager(contestant, maxWager) {
+            const wager = parseInt(document.getElementById('finalWagerAmount').value);
+            if (!isNaN(wager) && wager >= 0 && wager <= Math.max(0, maxWager)) {
+                if (window.currentFinalWagerCallback) {
+                    window.currentFinalWagerCallback(wager);
+                }
+                closeWagerPopup();
+            } else {
+                alert(`Please enter a valid wager between $0 and $${Math.max(0, maxWager)}`);
+            }
+        }
+
+        function updateContestantsDisplay() {
+            const display = document.getElementById('contestantsDisplay');
+            display.innerHTML = '';
+            
+            gameState.contestants.forEach((name, index) => {
+                const card = document.createElement('div');
+                card.className = 'contestant-card';
+                const score = gameState.scores[name] || 0;
+                const scoreColor = score < 0 ? '#ff4444' : '#4fbdba';
+                card.innerHTML = `
+                    <h3>${name}</h3>
+                    <div class="score-display" style="color: ${scoreColor}">$${score}</div>
+                    <div class="score-controls">
+                        <button class="amount-btn" onclick="adjustScore('${name}', 250)">+$250</button>
+                        <button class="amount-btn" onclick="adjustScore('${name}', 500)">+$500</button>
+                        <button class="amount-btn" onclick="adjustScore('${name}', 750)">+$750</button>
+                        <button class="amount-btn" onclick="adjustScore('${name}', 1000)">+$1000</button>
+                        <button onclick="adjustScore('${name}', -250)">-$250</button>
+                        <button onclick="adjustScore('${name}', -500)">-$500</button>
+                        <button onclick="adjustScore('${name}', -750)">-$750</button>
+                        <button onclick="adjustScore('${name}', -1000)">-$1000</button>
+                    </div>
+                    <div style="margin-top: 10px;">
+                        <input type="number" id="custom${index}" placeholder="Custom amount">
+                        <button onclick="adjustScoreCustom('${name}', ${index})">Add Custom</button>
+                    </div>
+                `;
+                display.appendChild(card);
+            });
+        }
+
+        function adjustScore(contestant, amount) {
+            gameState.scores[contestant] = (gameState.scores[contestant] || 0) + amount;
+            saveGameState();
+            updateContestantsDisplay();
+        }
+
+        function adjustScoreCustom(contestant, index) {
+            const customAmount = parseInt(document.getElementById(`custom${index}`).value);
+            if (!isNaN(customAmount)) {
+                adjustScore(contestant, customAmount);
+                document.getElementById(`custom${index}`).value = '';
+            }
+        }
+
+        function clearActiveClue() {
+            gameState.activeClue = null;
+            document.getElementById('activeClue').classList.add('hidden');
+            saveGameState();
+        }
+
+        function startNewGame() {
+            if (confirm('Start a new game? This will reset all scores.')) {
+                Object.keys(gameState.scores).forEach(contestant => {
+                    gameState.scores[contestant] = 0;
+                });
+                resetBoard();
+                gameState.finalJeopardy = null;
+                saveGameState();
+                updateContestantsDisplay();
+            }
+        }
+
+        function resetBoard() {
+            if (gameState.board.length > 0) {
+                for (let cat = 0; cat < gameState.board.length; cat++) {
+                    for (let val = 0; val < gameState.board[cat].length; val++) {
+                        gameState.board[cat][val].used = false;
+                    }
+                }
+                clearActiveClue();
+                saveGameState();
+                alert('Board reset!');
+            }
+        }
+
+        function updateUI() {
+            if (gameState.contestants.length > 0) {
+                updateContestantsDisplay();
+            }
+            if (gameState.activeClue) {
+                document.getElementById('activeClueText').textContent = gameState.activeClue.clue;
+                document.getElementById('activeClueValue').textContent = gameState.activeClue.value;
+                document.getElementById('activeClue').classList.remove('hidden');
+            } else {
+                document.getElementById('activeClue').classList.add('hidden');
+            }
+        }
+
+        // Buzzer control functions
+        let buzzerState = {
+            enabled: false,
+            currentBuzzer: null,
+            buzzerQueue: []
+        };
+
+        function saveBuzzerState() {
+            database.ref(`games/${gameId}/buzzerState`).set(buzzerState);
+        }
+
+        function enableBuzzers() {
+            buzzerState.enabled = true;
+            buzzerState.currentBuzzer = null;
+            buzzerState.buzzerQueue = [];
+            saveBuzzerState();
+        }
+
+        function resetBuzzers() {
+            buzzerState.currentBuzzer = null;
+            buzzerState.buzzerQueue = [];
+            saveBuzzerState();
+        }
+
+        function disableBuzzers() {
+            buzzerState.enabled = false;
+            buzzerState.currentBuzzer = null;
+            buzzerState.buzzerQueue = [];
+            saveBuzzerState();
+        }
+
+        function updateBuzzerUI() {
+            const statusText = document.getElementById('buzzerStatusText');
+            const currentBuzzerEl = document.getElementById('currentBuzzer');
+            const queueEl = document.getElementById('buzzerQueue');
+            
+            statusText.textContent = buzzerState.enabled ? 'Enabled' : 'Disabled';
+            statusText.style.color = buzzerState.enabled ? '#28a745' : '#ff4444';
+            
+            if (buzzerState.currentBuzzer) {
+                currentBuzzerEl.textContent = `${buzzerState.currentBuzzer} buzzed in!`;
+                currentBuzzerEl.style.display = 'block';
+            } else {
+                currentBuzzerEl.style.display = 'none';
+            }
+            
+            // Update buzzer queue display
+            queueEl.innerHTML = '';
+            buzzerState.buzzerQueue.forEach((buzz, index) => {
+                const li = document.createElement('li');
+                li.textContent = `${buzz.contestant} - ${new Date(buzz.timestamp).toLocaleTimeString()}`;
+                if (index === 0) li.style.color = '#ffd700';
+                queueEl.appendChild(li);
+            });
+        }
+
+        function clearClueAndBuzzers() {
+            clearActiveClue();
+            resetBuzzers();
+        }
+
+        // Initialize Firebase on startup
+        initializeFirebase();
+    </script>
+</body>
+</html>
