@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jeopardy Buzzer</title>
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+
+    <script>
+      // Your web app's Firebase configuration
+      const firebaseConfig = {
+        apiKey: "AIzaSyD5X7NrrFyAF1gCtaRJVXWUhohnXUBfxR8",
+        authDomain: "shlepardy-game.firebaseapp.com",
+        databaseURL: "https://shlepardy-game-default-rtdb.firebaseio.com",
+        projectId: "shlepardy-game",
+        storageBucket: "shlepardy-game.firebasestorage.app",
+        messagingSenderId: "1062728094019",
+        appId: "1:1062728094019:web:ac082ccd257e4fc40d1ff6"
+      };
+
+      // Initialize Firebase
+      firebase.initializeApp(firebaseConfig);
+      const database = firebase.database();
+      const gameId = 'default-game'; // You can change this for multiple games
+    </script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: #1a1a2e;
+            color: white;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .buzzer-container {
+            text-align: center;
+            max-width: 500px;
+            width: 100%;
+        }
+
+        .contestant-selector {
+            margin-bottom: 40px;
+        }
+
+        .contestant-selector h2 {
+            color: #ffd700;
+            margin-bottom: 20px;
+            font-size: 2em;
+        }
+
+        .contestant-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 30px;
+        }
+
+        .contestant-btn {
+            background: #0f3460;
+            border: 2px solid #4fbdba;
+            color: white;
+            padding: 15px 30px;
+            font-size: 1.2em;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .contestant-btn:hover {
+            background: #4fbdba;
+            transform: scale(1.05);
+        }
+
+        .contestant-btn.selected {
+            background: #4fbdba;
+            border-color: #ffd700;
+        }
+
+        .buzzer-area {
+            display: none;
+        }
+
+        .buzzer-area.active {
+            display: block;
+        }
+
+        .selected-name {
+            font-size: 2.5em;
+            color: #ffd700;
+            margin-bottom: 30px;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.7);
+        }
+
+        .buzzer-button {
+            background: #e94560;
+            border: none;
+            color: white;
+            width: 300px;
+            height: 300px;
+            border-radius: 50%;
+            font-size: 3em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .buzzer-button:hover:not(:disabled) {
+            transform: scale(1.05);
+            box-shadow: 0 15px 30px rgba(0,0,0,0.5);
+        }
+
+        .buzzer-button:active:not(:disabled) {
+            transform: scale(0.95);
+        }
+
+        .buzzer-button:disabled {
+            background: #666;
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+
+        .buzzer-button.buzzed {
+            background: #4fbdba;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(79,189,186,0.7); }
+            70% { box-shadow: 0 0 0 20px rgba(79,189,186,0); }
+            100% { box-shadow: 0 0 0 0 rgba(79,189,186,0); }
+        }
+
+        .status-message {
+            margin-top: 30px;
+            font-size: 1.5em;
+            color: #4fbdba;
+            min-height: 40px;
+        }
+
+        .waiting-message {
+            color: #ff4444;
+        }
+
+        .loading-message {
+            color: #ffd700;
+            font-size: 1.2em;
+        }
+
+        /* Final Jeopardy Styles */
+        .final-jeopardy-area {
+            display: none;
+            background: #2c1b47;
+            padding: 30px;
+            border-radius: 15px;
+            border: 3px solid #ffd700;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .final-jeopardy-area.active {
+            display: block;
+        }
+
+        .final-jeopardy-title {
+            font-size: 2.5em;
+            color: #ffd700;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .final-category {
+            font-size: 1.5em;
+            color: #4fbdba;
+            text-align: center;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+        }
+
+        .final-clue {
+            font-size: 1.3em;
+            background: #1a1a2e;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            line-height: 1.5;
+        }
+
+        .wager-section, .answer-section {
+            margin-bottom: 25px;
+        }
+
+        .wager-section h3, .answer-section h3 {
+            color: #ffd700;
+            margin-bottom: 10px;
+        }
+
+        .wager-input, .answer-input {
+            width: 100%;
+            padding: 15px;
+            font-size: 1.2em;
+            border: 2px solid #4fbdba;
+            border-radius: 8px;
+            background: #0f3460;
+            color: white;
+        }
+
+        .wager-info {
+            color: #4fbdba;
+            margin-top: 10px;
+            font-size: 1.1em;
+        }
+
+        .submit-btn {
+            background: #ffd700;
+            color: #1a1a2e;
+            padding: 15px 40px;
+            font-size: 1.3em;
+            font-weight: bold;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            width: 100%;
+        }
+
+        .submit-btn:hover:not(:disabled) {
+            background: #ffed4e;
+            transform: translateY(-2px);
+        }
+
+        .submit-btn:disabled {
+            background: #666;
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+
+        .locked-response {
+            background: #28a745;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .locked-response h3 {
+            color: #ffd700;
+            margin-bottom: 15px;
+        }
+
+        .locked-response p {
+            font-size: 1.2em;
+            margin: 10px 0;
+        }
+
+        @media (max-width: 600px) {
+            .buzzer-button {
+                width: 250px;
+                height: 250px;
+                font-size: 2.5em;
+            }
+            
+            .selected-name {
+                font-size: 2em;
+            }
+
+            .final-jeopardy-title {
+                font-size: 2em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="buzzer-container">
+        <div class="contestant-selector" id="contestantSelector">
+            <h2>Select Your Name</h2>
+            <div class="contestant-buttons" id="contestantButtons">
+                <p class="loading-message">Loading contestants...</p>
+            </div>
+            <p style="margin-top: 20px;">Choose your name to access your buzzer</p>
+        </div>
+
+        <div class="buzzer-area" id="buzzerArea">
+            <h1 class="selected-name" id="selectedName"></h1>
+            <button class="buzzer-button" id="buzzerButton" onclick="buzz()">
+                BUZZ IN!
+            </button>
+            <div class="status-message" id="statusMessage"></div>
+        </div>
+
+        <div class="final-jeopardy-area" id="finalJeopardyArea">
+            <h1 class="final-jeopardy-title">FINAL JEOPARDY!</h1>
+            <div class="final-category" id="finalCategory"></div>
+            <div class="final-clue" id="finalClue"></div>
+            
+            <div id="finalJeopardyForm">
+                <div class="wager-section">
+                    <h3>Enter Your Wager</h3>
+                    <input type="number" class="wager-input" id="wagerInput" min="0" placeholder="$0">
+                    <div class="wager-info">
+                        Your current score: $<span id="currentScore">0</span><br>
+                        Maximum wager: $<span id="maxWager">0</span>
+                    </div>
+                </div>
+                
+                <div class="answer-section">
+                    <h3>Enter Your Answer</h3>
+                    <input type="text" class="answer-input" id="answerInput" placeholder="What is...">
+                </div>
+                
+                <button class="submit-btn" id="submitFinalBtn" onclick="submitFinalJeopardy()">
+                    Lock In Response
+                </button>
+            </div>
+            
+            <div class="locked-response" id="lockedResponse" style="display: none;">
+                <h3>Response Submitted!</h3>
+                <p>Your wager: $<span id="lockedWager"></span></p>
+                <p>Your answer: <span id="lockedAnswer"></span></p>
+                <p style="color: #ffd700; margin-top: 20px;">Waiting for host to reveal responses...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let selectedContestant = null;
+        let buzzerState = {
+            enabled: false,
+            currentBuzzer: null,
+            buzzerQueue: []
+        };
+        let gameState = {
+            contestants: [],
+            scores: {},
+            finalJeopardy: null
+        };
+        let finalResponse = null;
+
+        // Initialize Firebase listeners
+        function initializeFirebase() {
+            // Listen for game state changes
+            database.ref(`games/${gameId}/gameState`).on('value', (snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    gameState = data;
+                    if (!selectedContestant) {
+                        loadContestants();
+                    } else {
+                        checkFinalJeopardy();
+                    }
+                }
+            });
+
+            // Listen for buzzer state changes
+            database.ref(`games/${gameId}/buzzerState`).on('value', (snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    buzzerState = data;
+                    if (selectedContestant) {
+                        updateBuzzerUI();
+                    }
+                }
+            });
+
+            // Listen for own Final Jeopardy response
+            if (selectedContestant) {
+                database.ref(`games/${gameId}/finalJeopardyResponses/${selectedContestant}`).on('value', (snapshot) => {
+                    const response = snapshot.val();
+                    if (response) {
+                        finalResponse = response;
+                        showLockedResponse();
+                    }
+                });
+            }
+        }
+
+        function loadContestants() {
+            const buttonsContainer = document.getElementById('contestantButtons');
+            buttonsContainer.innerHTML = '';
+            
+            if (!gameState.contestants || gameState.contestants.length === 0) {
+                buttonsContainer.innerHTML = '<p>No contestants set up yet. Please wait for the host to set up the game.</p>';
+                return;
+            }
+            
+            gameState.contestants.forEach(name => {
+                const btn = document.createElement('button');
+                btn.className = 'contestant-btn';
+                btn.textContent = name;
+                btn.onclick = () => selectContestant(name);
+                buttonsContainer.appendChild(btn);
+            });
+        }
+
+        function selectContestant(name) {
+            selectedContestant = name;
+            document.getElementById('selectedName').textContent = name;
+            document.getElementById('contestantSelector').style.display = 'none';
+            
+            // Check if Final Jeopardy is active
+            checkFinalJeopardy();
+            
+            // Listen for own Final Jeopardy response
+            database.ref(`games/${gameId}/finalJeopardyResponses/${selectedContestant}`).on('value', (snapshot) => {
+                const response = snapshot.val();
+                if (response) {
+                    finalResponse = response;
+                    showLockedResponse();
+                }
+            });
+            
+            // Update UI based on current state
+            updateBuzzerUI();
+        }
+
+        function checkFinalJeopardy() {
+            if (gameState.finalJeopardy && gameState.finalJeopardy.active && selectedContestant) {
+                showFinalJeopardy();
+            } else {
+                document.getElementById('finalJeopardyArea').classList.remove('active');
+                document.getElementById('buzzerArea').classList.add('active');
+            }
+        }
+
+        function showFinalJeopardy() {
+            document.getElementById('buzzerArea').classList.remove('active');
+            document.getElementById('finalJeopardyArea').classList.add('active');
+            
+            // Display category and clue
+            document.getElementById('finalCategory').textContent = gameState.finalJeopardy.category;
+            document.getElementById('finalClue').textContent = gameState.finalJeopardy.clue;
+            
+            // Set up wager limits
+            const currentScore = gameState.scores[selectedContestant] || 0;
+            const maxWager = Math.max(0, currentScore);
+            
+            document.getElementById('currentScore').textContent = currentScore;
+            document.getElementById('maxWager').textContent = maxWager;
+            document.getElementById('wagerInput').max = maxWager;
+            
+            // Check if already submitted
+            database.ref(`games/${gameId}/finalJeopardyResponses/${selectedContestant}`).once('value', (snapshot) => {
+                const response = snapshot.val();
+                if (response) {
+                    finalResponse = response;
+                    showLockedResponse();
+                }
+            });
+        }
+
+        function submitFinalJeopardy() {
+            const wagerInput = document.getElementById('wagerInput');
+            const answerInput = document.getElementById('answerInput');
+            
+            const wager = parseInt(wagerInput.value);
+            const answer = answerInput.value.trim();
+            const maxWager = parseInt(wagerInput.max);
+            
+            if (isNaN(wager) || wager < 0 || wager > maxWager) {
+                alert(`Please enter a valid wager between $0 and $${maxWager}`);
+                return;
+            }
+            
+            if (!answer) {
+                alert('Please enter your answer');
+                return;
+            }
+            
+            // Submit response to Firebase
+            const response = {
+                contestant: selectedContestant,
+                wager: wager,
+                answer: answer,
+                timestamp: Date.now()
+            };
+            
+            database.ref(`games/${gameId}/finalJeopardyResponses/${selectedContestant}`).set(response)
+                .then(() => {
+                    finalResponse = response;
+                    showLockedResponse();
+                })
+                .catch((error) => {
+                    alert('Error submitting response. Please try again.');
+                    console.error(error);
+                });
+        }
+
+        function showLockedResponse() {
+            document.getElementById('finalJeopardyForm').style.display = 'none';
+            document.getElementById('lockedResponse').style.display = 'block';
+            document.getElementById('lockedWager').textContent = finalResponse.wager;
+            document.getElementById('lockedAnswer').textContent = finalResponse.answer;
+        }
+
+        function updateBuzzerUI() {
+            const button = document.getElementById('buzzerButton');
+            const status = document.getElementById('statusMessage');
+            
+            if (!buzzerState.enabled) {
+                button.disabled = true;
+                button.classList.remove('buzzed');
+                button.textContent = 'WAIT...';
+                status.textContent = 'Waiting for host to enable buzzers';
+                status.className = 'status-message waiting-message';
+            } else if (buzzerState.currentBuzzer === selectedContestant) {
+                button.disabled = true;
+                button.classList.add('buzzed');
+                button.textContent = 'YOU BUZZED!';
+                status.textContent = 'You buzzed in first!';
+                status.className = 'status-message';
+            } else if (buzzerState.currentBuzzer) {
+                button.disabled = true;
+                button.classList.remove('buzzed');
+                button.textContent = 'LOCKED OUT';
+                status.textContent = `${buzzerState.currentBuzzer} buzzed in`;
+                status.className = 'status-message waiting-message';
+            } else {
+                button.disabled = false;
+                button.classList.remove('buzzed');
+                button.textContent = 'BUZZ IN!';
+                status.textContent = 'Ready to buzz!';
+                status.className = 'status-message';
+            }
+        }
+
+        function buzz() {
+            if (!buzzerState.enabled || buzzerState.currentBuzzer) return;
+            
+            // Record buzz in Firebase
+            const buzzData = {
+                contestant: selectedContestant,
+                timestamp: Date.now()
+            };
+            
+            // Update buzzer state in Firebase
+            database.ref(`games/${gameId}/buzzerState`).transaction((current) => {
+                // Handle null/undefined state
+                if (!current) {
+                    return {
+                        enabled: true,
+                        currentBuzzer: selectedContestant,
+                        buzzerQueue: [buzzData]
+                    };
+                }
+                
+                // Check if someone already buzzed
+                if (current.currentBuzzer) {
+                    return current;
+                }
+                
+                // Update the state
+                current.currentBuzzer = selectedContestant;
+                if (!current.buzzerQueue) {
+                    current.buzzerQueue = [];
+                }
+                current.buzzerQueue.push(buzzData);
+                return current;
+            });
+        }
+
+        // Initialize Firebase on startup
+        initializeFirebase();
+    </script>
+</body>
+</html>
